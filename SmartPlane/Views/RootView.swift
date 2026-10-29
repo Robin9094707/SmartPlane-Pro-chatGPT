@@ -127,11 +127,11 @@ struct SettingsView: View {
                     Slider(value: $ble.throttleLimit, in: 0.1...1, step: 0.05).disabled(ble.armed)
                     Text("Nach dem Verbinden ist der Motor gesperrt. Freigabe erfolgt im Cockpit. Beim Verlassen oder Sperren der App wird ein Stopp angefordert und die Verbindung getrennt.").font(.caption).foregroundStyle(.secondary)
                 }
-                Section("Steuerprofile") {
+                Section {
                     ForEach(ControlProfile.builtins) { p in VStack(alignment: .leading, spacing: 4) { Text(p.name); Text(p.evidence).font(.caption).foregroundStyle(.secondary) } }
                     ForEach(ble.customProfiles) { p in HStack { Text(p.name); Spacer(); Button(role: .destructive) { ble.removeProfile(p) } label: { Image(systemName: "trash") }.disabled(ble.armed) } }
                     Button("JSON-Steuerprofil importieren") { importing = true }.disabled(ble.armed)
-                } footer: { Text("Eigene Profile nur mit belegten UUIDs und Befehlen verwenden. Keine automatischen Pro-Stunts ohne rekonstruiertes Protokoll.") }
+                } header: { Text("Steuerprofile") } footer: { Text("Eigene Profile nur mit belegten UUIDs und Befehlen verwenden. Keine automatischen Pro-Stunts ohne rekonstruiertes Protokoll.") }
                 Section("Firmware & Datenschutz") {
                     Text("Das Labor liest die angebotenen Bluetooth-Dienste, Firmware-Versionsnummern und Rohwerte. Ein vollständiges Firmware-Abbild lässt sich über normales BLE nicht allgemein auslesen.")
                     Text("Alle Daten bleiben auf deinem iPhone. Berichte werden nur über die Teilen-Funktion weitergegeben. Keine Analyse- oder Cloud-Dienste.")

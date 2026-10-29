@@ -22,9 +22,9 @@ struct LabView: View {
                         if !ble.matchingProfiles.isEmpty {
                             Menu("Passendes Steuerprofil auswählen") {
                                 ForEach(ble.matchingProfiles) { p in Button(p.name) { ble.selectProfile(p) } }
-                            }.disabled(ble.armed)
+                            }.disabled(ble.armed || !ble.connected)
                         }
-                        Button("Alle lesbaren Werte abfragen") { ble.readAll() }.disabled(ble.armed)
+                        Button("Alle lesbaren Werte abfragen") { ble.readAll() }.disabled(ble.armed || !ble.connected)
                     }
                     Button { do { report = try ble.exportReport() } catch { ble.problem = error.localizedDescription } } label: { Label("Aktuellen Diagnosebericht erstellen", systemImage: "doc.badge.gearshape") }
                     if let report { ShareLink(item: report) { Label("Diagnosebericht teilen", systemImage: "square.and.arrow.up") } }
@@ -34,7 +34,7 @@ struct LabView: View {
                 }
                 if showEvents {
                     Section("Letzte 200 Ereignisse") {
-                        Button("Protokoll löschen", role: .destructive) { ble.clearEvents() }.disabled(ble.armed)
+                        Button("Protokoll löschen", role: .destructive) { ble.clearEvents() }.disabled(ble.armed || !ble.connected)
                         ForEach(Array(ble.events.suffix(200).reversed())) { event in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack { Text(event.time, style: .time); Text(event.kind.uppercased()).foregroundStyle(.mint) }.font(.caption2.monospaced())
@@ -110,11 +110,11 @@ struct CharacteristicView: View {
                     LabeledContent("Hex") { Text(entry.valueHex.isEmpty ? "Noch kein Wert" : entry.valueHex).font(.caption.monospaced()).textSelection(.enabled) }
                     if !entry.valueText.isEmpty { LabeledContent("UTF-8") { Text(entry.valueText).font(.caption).textSelection(.enabled) } }
                     if let date = entry.updatedAt { LabeledContent("Empfangen") { Text(date, style: .time).font(.caption) } }
-                    if entry.properties.contains("read") { Button("Wert lesen") { ble.read(entryID) }.disabled(ble.armed) }
+                    if entry.properties.contains("read") { Button("Wert lesen") { ble.read(entryID) }.disabled(ble.armed || !ble.connected) }
                     if entry.properties.contains("notify") || entry.properties.contains("indicate") {
-                        Toggle("Benachrichtigungen", isOn: Binding(get: { entry.notifying }, set: { ble.notify(entryID, enabled: $0) })).disabled(ble.armed)
+                        Toggle("Benachrichtigungen", isOn: Binding(get: { entry.notifying }, set: { ble.notify(entryID, enabled: $0) })).disabled(ble.armed || !ble.connected)
                     }
-                    Button("Deskriptoren untersuchen") { ble.inspectDescriptors(entryID) }.disabled(ble.armed)
+                    Button("Deskriptoren untersuchen") { ble.inspectDescriptors(entryID) }.disabled(ble.armed || !ble.connected)
                     ForEach(entry.descriptors.keys.sorted(), id: \.self) { key in LabeledContent(key, value: entry.descriptors[key] ?? "").font(.caption.monospaced()) }
                 }
                 if entry.properties.contains("write") || entry.properties.contains("writeWithoutResponse") {

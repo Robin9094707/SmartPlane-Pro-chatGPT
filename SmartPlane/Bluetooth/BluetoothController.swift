@@ -30,7 +30,7 @@ struct BLEEvent: Identifiable, Codable {
     var message: String
 }
 
-@MainActor final class BluetoothController: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
+@MainActor final class BluetoothController: NSObject, ObservableObject, @preconcurrency CBCentralManagerDelegate, @preconcurrency CBPeripheralDelegate {
     @Published var bluetoothStatus = "Bluetooth wird vorbereitet …"
     @Published var scanning = false
     @Published var devices: [NearbyPlane] = []
@@ -69,6 +69,11 @@ struct BLEEvent: Identifiable, Codable {
     private var lastRSSI = Date.distantPast
     private var flightStarted: Date?
     private var stopGeneration = UUID()
+    private var savedDeviceID: UUID?
+    private var savedDeviceName: String?
+    private var savedRSSI: Int?
+    private var savedBattery: Int?
+    private var savedProfile: ControlProfile?
     private var probing = false
     private var pollCount = 0
     private var backgroundToken: UIBackgroundTaskIdentifier = .invalid
@@ -201,7 +206,9 @@ struct BLEEvent: Identifiable, Codable {
     private func matches(_ p: ControlProfile) -> Bool {
         p.commands.allSatisfy { command in
             guard let c = characteristics[profileKey(command.characteristicUUID, service: p.serviceUUID)] else { return false }
-            return c.properties.contains(.write) || c.properties.contains(.writeWithoutResponse)
+            guard c.properties.contains(.write) || c.properties.contains(.writeWithoutResponse), let peripheral, let data = try? command.payload(throttle: 0, rudder: 0) else { return false }
+            let type: CBCharacteristicWriteType = c.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
+            return data.count <= peripheral.maximumWriteValueLength(for: type)
         }
     }
     var matchingProfiles: [ControlProfile] { (ControlProfile.builtins + customProfiles).filter { matches($0) } }
@@ -261,17 +268,24 @@ struct BLEEvent: Identifiable, Codable {
             let advertisement: [String: String]; let gatt: [GATTEntry]; let events: [BLEEvent]
             let selectedProfile: ControlProfile?; let limitations: [String]
         }
-        let ad = devices.first(where: { $0.id == connectedID })?.advertisement ?? [:]
-        let report = Report(schemaVersion: 1, date: Date(), appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0", iosVersion: UIDevice.current.systemVersion, deviceID: connectedID, deviceName: connectedName, rssi: rssi, batteryPercent: battery, advertisement: ad, gatt: entries, events: events, selectedProfile: profile, limitations: ["iOS exposes a peripheral UUID, not its Bluetooth MAC address.", "Readable GATT and advertised data only; not a full firmware dump.", "Legacy SmartLink protocol is not confirmed for SmartPlane Pro.", "A successful write is not proof of physical motor state."])
+        let reportID = connectedID ?? savedDeviceID
+        let ad = devices.first(where: { $0.id == reportID })?.advertisement ?? [:]
+        let report = Report(schemaVersion: 1, date: Date(), appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0", iosVersion: UIDevice.current.systemVersion, deviceID: reportID, deviceName: connectedName ?? savedDeviceName, rssi: rssi ?? savedRSSI, batteryPercent: battery ?? savedBattery, advertisement: ad, gatt: entries, events: events, selectedProfile: profile ?? savedProfile, limitations: ["iOS exposes a peripheral UUID, not its Bluetooth MAC address.", "Readable GATT and advertised data only; not a full firmware dump.", "Legacy SmartLink protocol is not confirmed for SmartPlane Pro.", "A successful write is not proof of physical motor state."])
         let directory = URL.documentsDirectory.appending(path: "Reports"); try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appending(path: "SmartPlane-\(Int(Date().timeIntervalSince1970)).json")
         try encoder.encode(report).write(to: url, options: .atomic); return url
     }
     func clearEvents() { guard !armed else { return }; events.removeAll() }
-    private func resetConnection() {
+    private func resetConnection(preserveDiagnostics: Bool = false) {
+        if preserveDiagnostics, let connectedID {
+            savedDeviceID = connectedID; savedDeviceName = connectedName
+            savedRSSI = rssi; savedBattery = battery; savedProfile = profile
+        } else if !preserveDiagnostics {
+            savedDeviceID = nil; savedDeviceName = nil; savedRSSI = nil; savedBattery = nil; savedProfile = nil
+        }
         gate.stop(); armed = false; throttle = 0; rudder = 0; flightStarted = nil
         connectedID = nil; connectingID = nil; connectedName = nil; profile = nil
-        entries.removeAll(); characteristics.removeAll(); waitingServices.removeAll()
+        if !preserveDiagnostics { entries.removeAll() }; characteristics.removeAll(); waitingServices.removeAll()
         pendingResponse = nil; pendingFrame.removeAll(); lastFrame.removeAll()
         battery = nil; rssi = nil; discoveryComplete = false; probing = false
     }
@@ -285,7 +299,7 @@ struct BLEEvent: Identifiable, Codable {
         default: bluetoothStatus = "Bluetooth-Status unbekannt"
         }
         log("state", bluetoothStatus)
-        if central.state != .poweredOn { stopScan(); resetConnection() }
+        if central.state != .poweredOn { stopScan(); resetConnection(preserveDiagnostics: true) }
     }
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name ?? "Unbenanntes BLE-Gerät"
@@ -316,7 +330,7 @@ struct BLEEvent: Identifiable, Codable {
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         log("disconnected", error?.localizedDescription ?? "Verbindung beendet")
         if armed { problem = "Verbindung verloren. Motorstopp kann nicht bestätigt werden." }
-        resetConnection(); self.peripheral = nil
+        resetConnection(preserveDiagnostics: true); self.peripheral = nil
     }
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error { problem = error.localizedDescription; log("error", error.localizedDescription); return }
