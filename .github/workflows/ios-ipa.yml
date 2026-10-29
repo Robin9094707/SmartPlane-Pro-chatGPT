@@ -32,6 +32,20 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -project SmartPlane.xcodeproj -scheme SmartPlane -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/Simulator CODE_SIGNING_ALLOWED=NO build 2>&1 | tee simulator-build.log
+      - name: Smoke test cockpit and capture native screenshots
+        run: |
+          set -o pipefail
+          DEVICE_ID=$(xcrun simctl create SmartPlane-QA 'iPhone 17 Pro Max')
+          xcodebuild -project SmartPlane.xcodeproj -scheme SmartPlane -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build/Simulator -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=NO test 2>&1 | tee ui-test-build.log
+          mkdir -p build/screenshots
+          xcrun xcresulttool export attachments --path build/UITests.xcresult --output-path build/screenshots
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-UI-screenshots
+          path: build/screenshots
+          if-no-files-found: ignore
       - name: Archive unsigned iOS app
         run: |
           set -o pipefail

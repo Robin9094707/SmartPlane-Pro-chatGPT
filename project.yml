@@ -51,6 +51,17 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: eu.simplex.smartplanepro
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTS_MACCATALYST: NO
+  SmartPlaneUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [SmartPlaneUITests]
+    dependencies:
+      - target: SmartPlane
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: eu.simplex.smartplanepro.uitests
+        TEST_TARGET_NAME: SmartPlane
 schemes:
   SmartPlane:
     build:
@@ -58,5 +69,8 @@ schemes:
         SmartPlane: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets: [SmartPlaneUITests]
     archive:
       config: Release
