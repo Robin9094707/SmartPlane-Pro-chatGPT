@@ -92,6 +92,8 @@ propeller-off bench test. Imported profiles have the same limitation.
 ## Build validation
 
 GitHub Actions runs Swift unit tests, compiles an iOS Simulator build and archives
-an arm64 device app using the runner's Xcode 26 SDK. Check the actual Actions run
+an arm64 device app using the runner's Xcode 26 SDK. A UI smoke test exercises
+the training arm gate and STOP, checks that Bluetooth TX remains zero, and captures
+portrait/landscape screenshots. Check the actual Actions run
 for results. No hardware tests have been performed. Bluetooth control needs a
 physical iPhone; the Simulator cannot verify this aircraft's BLE behavior.

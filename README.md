@@ -27,7 +27,8 @@ planes back to modern iPhones. **Version 1.0.0 — Research Preview.**
 - Validated, persistent JSON profiles for known packet layouts. See the
   [example](docs/control-profile-example.json); complex Pro handshakes or checksums
   will need a dedicated driver once recovered.
-- GitHub Actions: protocol tests, simulator compilation, device archive, unsigned
+- GitHub Actions: protocol tests, simulator compilation, training UI smoke test,
+  native portrait/landscape screenshots, device archive, unsigned
   IPA, source ZIP, hashes and build logs.
 
 ## Download and first test
