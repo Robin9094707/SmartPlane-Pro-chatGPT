@@ -2,6 +2,7 @@ import XCTest
 
 @MainActor final class CockpitSmokeTests: XCTestCase {
     func testTrainingArmStopAndDiagnostics() throws {
+        continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments += ["-AppleLanguages", "(de)", "-AppleLocale", "de_DE"]
         addUIInterruptionMonitor(withDescription: "Bluetooth permission") { alert in

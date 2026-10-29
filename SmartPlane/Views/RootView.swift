@@ -15,11 +15,15 @@ struct RootView: View {
             .onChange(of: selection) { _, _ in if ble.armed { ble.stop(reason: "Ansicht gewechselt") } }
     }
 }
+private enum CockpitRoute: String, Identifiable {
+    case live, training
+    var id: String { rawValue }
+    var isTraining: Bool { self == .training }
+}
 struct HomeView: View {
     @EnvironmentObject var ble: BluetoothController
     @Binding var selection: Int
-    @State private var cockpit = false
-    @State private var demo = false
+    @State private var cockpit: CockpitRoute?
     var body: some View {
         NavigationStack {
             ZStack {
@@ -43,15 +47,15 @@ struct HomeView: View {
                             Label(ble.profile == nil ? "Protokoll prüfen" : "Steuerprofil erkannt", systemImage: ble.profile == nil ? "magnifyingglass" : "checkmark.circle").font(.headline)
                             Text(ble.profile?.evidence ?? "Die App erkennt bekannte SmartLink-Dienste. Für SmartPlane Pro ist die Steuerung noch nicht bestätigt. Bei abweichendem Protokoll hilft das Bluetooth-Labor.").font(.subheadline).foregroundStyle(.secondary)
                         }.panel()
-                        Button { if ble.connected { demo = false; cockpit = true } else { selection = 1 } } label: {
+                        Button { if ble.connected { cockpit = .live } else { selection = 1 } } label: {
                             Label(ble.connected ? "Cockpit öffnen" : "Flugzeug verbinden", systemImage: ble.connected ? "airplane.departure" : "antenna.radiowaves.left.and.right").font(.headline).frame(maxWidth: .infinity).padding(18)
                         }.buttonStyle(.borderedProminent).tint(.mint).foregroundStyle(.black)
-                        Button { demo = true; cockpit = true } label: { Label("Cockpit im Trainingsmodus ansehen", systemImage: "play.circle").frame(maxWidth: .infinity) }.buttonStyle(.plain).foregroundStyle(.mint)
+                        Button { cockpit = .training } label: { Label("Cockpit im Trainingsmodus ansehen", systemImage: "play.circle").frame(maxWidth: .infinity) }.buttonStyle(.plain).foregroundStyle(.mint)
                         Text("Training sendet keine Bluetooth-Befehle.").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                     }.padding(24).padding(.bottom, 20)
                 }
             }.toolbar(.hidden, for: .navigationBar)
-                .fullScreenCover(isPresented: $cockpit) { CockpitView(demo: demo).environmentObject(ble).preferredColorScheme(.dark) }
+                .fullScreenCover(item: $cockpit) { route in CockpitView(demo: route.isTraining).environmentObject(ble).preferredColorScheme(.dark) }
         }
     }
 }
