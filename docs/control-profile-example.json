@@ -1,0 +1,12 @@
+{
+  "id": "my-evidence-backed-smartlink",
+  "name": "Eigenes SmartLink-Profil (kein bestätigter Pro-Treiber)",
+  "serviceUUID": "75B64E51-F171-4ED1-921A-476090D80BA7",
+  "throttleMax": 254,
+  "rudderMax": 126,
+  "commands": [
+    {"characteristicUUID": "75B64E51-0010-4ED1-921A-476090D80BA7", "template": "{throttle}"},
+    {"characteristicUUID": "75B64E51-0021-4ED1-921A-476090D80BA7", "template": "{rudder}"}
+  ],
+  "evidence": "Older TobyRich services.plist and BLESmartplaneService.java. Not verified for SmartPlane Pro."
+}

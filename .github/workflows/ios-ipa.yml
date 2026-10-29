@@ -1,0 +1,63 @@
+name: Build iOS IPA
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**.md']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode and SDK versions
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+          swift --version
+      - name: Test protocol encoding and flight interlocks
+        working-directory: ProtocolCore
+        run: swift test --parallel
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Compile simulator build
+        run: |
+          set -o pipefail
+          xcodebuild -project SmartPlane.xcodeproj -scheme SmartPlane -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/Simulator CODE_SIGNING_ALLOWED=NO build 2>&1 | tee simulator-build.log
+      - name: Archive unsigned iOS app
+        run: |
+          set -o pipefail
+          xcodebuild -project SmartPlane.xcodeproj -scheme SmartPlane -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/SmartPlane.xcarchive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' archive 2>&1 | tee device-build.log
+      - name: Package IPA and source
+        run: |
+          mkdir -p build/ipa/Payload dist
+          cp -R build/SmartPlane.xcarchive/Products/Applications/SmartPlane.app build/ipa/Payload/
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' build/ipa/Payload/SmartPlane.app/Info.plist
+          test -f build/ipa/Payload/SmartPlane.app/SmartPlane
+          cd build/ipa
+          zip -qry ../../dist/SmartPlanePro-1.0.0-unsigned.ipa Payload
+          cd ../..
+          git archive --format=zip HEAD -o dist/SmartPlanePro-1.0.0-source.zip
+          shasum -a 256 dist/*.ipa dist/*source.zip > dist/SHA256SUMS.txt
+          cp docs/INSTALL-DE.md docs/PROTOCOL-RESEARCH.md dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SmartPlanePro-1.0.0-unsigned-IPA
+          path: dist/*
+          retention-days: 90
+          if-no-files-found: error
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: '*-build.log'
+          retention-days: 14

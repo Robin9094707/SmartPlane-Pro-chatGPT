@@ -1,0 +1,62 @@
+name: SmartPlane
+options:
+  bundleIdPrefix: eu.simplex
+  deploymentTarget:
+    iOS: '18.0'
+  xcodeVersion: '26.0'
+packages:
+  PlaneProtocol:
+    path: ProtocolCore
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    CODE_SIGNING_ALLOWED: NO
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: targeted
+targets:
+  SmartPlane:
+    type: application
+    platform: iOS
+    sources:
+      - SmartPlane
+    dependencies:
+      - package: PlaneProtocol
+    info:
+      path: SmartPlane/Info.plist
+      properties:
+        CFBundleDisplayName: SmartPlane Pro
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        NSBluetoothAlwaysUsageDescription: SmartPlane verbindet sich mit deinem Flugzeug und liest Bluetooth-Diagnosedaten.
+        NSMotionUsageDescription: Die Neigung deines iPhones steuert auf Wunsch das Ruder deines Flugzeugs.
+        UILaunchScreen: {}
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: eu.simplex.smartplanepro
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+schemes:
+  SmartPlane:
+    build:
+      targets:
+        SmartPlane: all
+    run:
+      config: Debug
+    archive:
+      config: Release
