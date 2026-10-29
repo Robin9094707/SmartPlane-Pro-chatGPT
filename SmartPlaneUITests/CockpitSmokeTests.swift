@@ -22,7 +22,8 @@ import XCTest
         XCTAssertTrue(checkbox.waitForExistence(timeout: 5))
         let start = app.buttons["Training starten"]
         XCTAssertFalse(start.isEnabled)
-        checkbox.tap(); XCTAssertTrue(start.isEnabled); start.tap()
+        checkbox.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+        XCTAssertTrue(start.waitForEnabled(timeout: 5)); start.tap()
         XCTAssertTrue(app.staticTexts["FREI"].waitForExistence(timeout: 5))
         screenshot("02-Cockpit-Portrait")
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -38,5 +39,11 @@ import XCTest
     private func screenshot(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+}
+
+private extension XCUIElement {
+    func waitForEnabled(timeout: TimeInterval) -> Bool {
+        XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: self)], timeout: timeout) == .completed
     }
 }
